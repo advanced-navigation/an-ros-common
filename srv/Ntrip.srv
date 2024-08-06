@@ -1,0 +1,44 @@
+# This service outlines the data and response for requesting an update to the NTRIP
+# (Networked Transport of RTCM via Internet Protocol) client. When active the NTRIP
+# client will connect to your selected caster and stream the data into your Advanced
+# Navigation device using ANPP packet 55 the RTCM Corrections Packet.
+# (Certus ANPP: https://docs.advancednavigation.com/certus/ANPP/RTCMCorrectionsPacket.htm)
+#
+# If the streamed data is valid the device will then use it to generate a RTK fix
+# with much higher accuracy of the antennas position.
+
+
+bool NTRIP_ENABLE = 1
+bool NTRIP_DISABLE = 0
+
+# Enable boolean flag. Will force the ntrip client to the chosen state. If a client
+# is running and the flag is set to false it will also close and save the logfile for
+# that session and a new logfile will be generated at the start of a new instance.
+bool enable
+
+# This is the caster host to connect to to recieve corrections data in the format
+# <Host>:<Port>. Where the host can either be a hostname or an IPv4 address. for
+# example, igs-ip.net:2101
+string host
+
+# If the server requires verification for access this field should be populated
+# with your access username. If not this can be left blank.
+string username
+
+# If the server requires verification for access this field should be populated
+# with your access password. If not this can be left blank.
+string password
+
+# The mountpoint which the RTCM corrections should be retrieved from. For best
+# results the mountpoint should be as close as possible to your position. If no
+# mountpoint is selected the service will error out, and the casters sourcetable
+# with possible mountpoints will be printed to the terminal running the driver.
+string mountpoint
+
+---
+
+# A boolean success value
+bool success
+
+# A more detailed success/failure string that is populated with specific errors.
+string reason
