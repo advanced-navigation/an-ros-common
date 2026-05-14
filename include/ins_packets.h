@@ -133,6 +133,12 @@ typedef enum
 	packet_id_sensor_temperatures,
 	packet_id_system_temperature,
 	packet_id_quantum_sensor,
+	packet_id_88_reserved,
+	packet_id_vessel_motion,
+	packet_id_90_reserved,
+	packet_id_91_reserved,
+	packet_id_gnss_position_velocity_time,
+	packet_id_gnss_orientation,
 	end_state_packets,
 
 	packet_id_packet_timer_period = START_CONFIGURATION_PACKETS,
@@ -520,6 +526,43 @@ typedef struct
 		} b;
 	} flags;
 } raw_gnss_packet_t;
+
+typedef enum
+{
+	spoofing_interference_status_unknown              = 0,
+	spoofing_interference_status_none                 = 1,
+	spoofing_interference_status_detected_mitigated   = 2,
+	spoofing_interference_status_detected_unmitigated = 3,
+} spoofing_interference_status_e;
+
+typedef struct
+{
+	uint8_t gnss_id;
+	uint8_t reserved;
+	union
+	{
+		uint16_t r;
+		struct
+		{
+			uint8_t gnss_fix_status :3;
+			uint8_t spoofing_status :3;
+			uint8_t interference_status :3;
+			uint8_t velocity_valid :1;
+			uint8_t time_valid :1;
+			uint8_t antenna_disconnected :1;
+			uint8_t antenna_short :1;
+			uint8_t gnss_failure :1;
+			uint8_t reserved :2;
+		} b;
+	} status_bitfield;
+	uint32_t unix_time_seconds;
+	uint32_t microseconds;
+	double position[3];
+	float position_standard_deviation[3];
+	float velocity[3];
+	float velocity_standard_deviation[3];
+	uint32_t latency;
+} gnss_position_velocity_time_packet_t;
 
 typedef struct
 {
@@ -1404,6 +1447,7 @@ int decode_quaternion_orientation_standard_deviation_packet(quaternion_orientati
 int decode_raw_sensors_packet(raw_sensors_packet_t* raw_sensors_packet, an_packet_t* an_packet);
 int decode_raw_gnss_packet(raw_gnss_packet_t* raw_gnss_packet, an_packet_t* an_packet);
 an_packet_t* encode_raw_gnss_packet(raw_gnss_packet_t* raw_gnss_packet);
+int decode_gnss_position_velocity_time_packet(gnss_position_velocity_time_packet_t* gnss_pvt_packet, an_packet_t* an_packet);
 int decode_satellites_packet(satellites_packet_t* satellites_packet, an_packet_t* an_packet);
 int decode_geodetic_position_packet(geodetic_position_packet_t* geodetic_position_packet, an_packet_t* an_packet);
 int decode_ecef_position_packet(ecef_position_packet_t* ecef_position_packet, an_packet_t* an_packet);

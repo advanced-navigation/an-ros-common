@@ -411,6 +411,24 @@ int decode_satellites_packet(satellites_packet_t* satellites_packet, an_packet_t
 	else return 1;
 }
 
+int decode_gnss_position_velocity_time_packet(gnss_position_velocity_time_packet_t* gnss_pvt_packet, an_packet_t* an_packet)
+{
+	if(an_packet->id == packet_id_gnss_position_velocity_time && an_packet->length == 76)
+	{
+		gnss_pvt_packet->gnss_id = an_packet->data[0];
+		memcpy(&gnss_pvt_packet->status_bitfield.r, &an_packet->data[2], sizeof(uint16_t));
+		memcpy(&gnss_pvt_packet->unix_time_seconds, &an_packet->data[4], sizeof(uint32_t));
+		memcpy(&gnss_pvt_packet->microseconds, &an_packet->data[8], sizeof(uint32_t));
+		memcpy(&gnss_pvt_packet->position[0], &an_packet->data[12], 3 * sizeof(double));
+		memcpy(&gnss_pvt_packet->position_standard_deviation[0], &an_packet->data[36], 3 * sizeof(float));
+		memcpy(&gnss_pvt_packet->velocity[0], &an_packet->data[48], 3 * sizeof(float));
+		memcpy(&gnss_pvt_packet->velocity_standard_deviation[0], &an_packet->data[60], 3 * sizeof(float));
+		memcpy(&gnss_pvt_packet->latency, &an_packet->data[72], sizeof(uint32_t));
+		return 0;
+	}
+	else return 1;
+}
+
 int decode_geodetic_position_packet(geodetic_position_packet_t* geodetic_position_packet, an_packet_t* an_packet)
 {
 	if(an_packet->id == packet_id_geodetic_position && an_packet->length == 24)
