@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Compile all C / C++ sources standalone (no ROS 2 required).
+  # Uses the CMakeLists.txt at the repo root which builds a static library from
+  # the six source files.
+  # ---------------------------------------------------------------------------
+  build-cpp:
+    name: Build C/C++ (standalone)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends build-essential cmake
+
+      - name: Configure (CMake)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Validate the ROS 2 .msg / .srv definitions.
+  # Assembles a minimal 'adnav_interfaces' colcon package, copies the msg/srv
+  # files into it, and runs a full rosidl code generation build to verify
+  # syntax and cross-references.
+  # ---------------------------------------------------------------------------
+  validate-msgs:
+    name: Validate ROS 2 msgs/srvs (Humble)
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y --no-install-recommends \
+            python3-colcon-common-extensions \
+            ros-humble-rosidl-default-generators \
+            ros-humble-std-msgs \
+            ros-humble-geometry-msgs
+
+      - name: Assemble validation workspace
+        run: |
+          PKGDIR=/tmp/ws/src/adnav_interfaces
+          mkdir -p "${PKGDIR}/msg" "${PKGDIR}/srv"
+
+          # Copy interface definitions from this checkout.
+          cp msg/*.msg "${PKGDIR}/msg/"
+          cp srv/*.srv "${PKGDIR}/srv/"
+
+          # Copy the CI stub package manifest and build file.
+          cp .github/ci/package.xml "${PKGDIR}/package.xml"
+          cp .github/ci/CMakeLists.txt "${PKGDIR}/CMakeLists.txt"
+
+      - name: Build interfaces (validates msg/srv syntax)
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          cd /tmp/ws
+          colcon build --event-handlers console_direct+
