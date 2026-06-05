@@ -196,6 +196,17 @@ namespace utils {
                 // Stream in interface number and name.
                 ss << "\n\t" << std::setw(2) << std::right << i << " | IF Name: " << ptr_entry->ifa_name << "\t";
 
+                // Per getifaddrs(3) the ifa_addr field may be NULL for
+                // interfaces without an address assigned (common for some
+                // virtual / unconfigured interfaces, easy to hit inside a
+                // container's network namespace). Dereferencing it caused
+                // a SIGSEGV in TCP-server / UDP modes.
+                if (ptr_entry->ifa_addr == nullptr) {
+                    ss << "(no address)";
+                    i++;
+                    continue;
+                }
+
                 // Check that the interface is IPv4
                 sa_family_t address_family = ptr_entry->ifa_addr->sa_family;
                 if (address_family == AF_INET) {

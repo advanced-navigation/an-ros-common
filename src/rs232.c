@@ -427,6 +427,7 @@ int comSetRts(int index, int state)
 #include <termios.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <errno.h>
 
 #if !defined(__USE_SVID)
 #define __USE_SVID // For strdup
@@ -608,10 +609,29 @@ int comWrite(int index, const unsigned char *buffer, size_t len)
         return 0;
     if (comDevices[index].handle <= 0)
         return 0;
-    int res = write(comDevices[index].handle, buffer, len);
-    if (res < 0)
-        res = 0;
-    return res;
+    /* Loop to handle short writes from the kernel TX buffer (rare on serial
+     * but cheap to be safe). */
+    size_t total = 0;
+    while (total < len)
+    {
+        ssize_t res = write(comDevices[index].handle,
+                            (const char *)buffer + total, len - total);
+        if (res < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            return (int)total;
+        }
+        if (res == 0)
+            break;
+        total += (size_t)res;
+    }
+    /* Block until the bytes have been transmitted on the wire, not just
+     * queued in the kernel TX buffer. Without this, the caller can issue
+     * back-to-back configuration packets faster than the device can apply
+     * them, and AN devices have been observed to NACK the second write. */
+    tcdrain(comDevices[index].handle);
+    return (int)total;
 }
 
 int comRead(int index, unsigned char *buffer, size_t len)
